@@ -1,3 +1,15 @@
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Spotlight and Finder metadata
+._*
+.Spotlight-V100
+.Trashes
+.VolumeIcon.icns
+.fseventsd
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

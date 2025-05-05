@@ -27,3 +27,15 @@ python create_playlist.py \
 ```sh
 pip install -r requirements.txt
 ```
+
+## Contributing & Project Standards
+
+This project includes a growing internal documentation library located in the `[docs/](docs/)` directory. These documents outline development practices, naming conventions, and project workflows to ensure consistency and long-term maintainability.
+
+### Key Docs
+
+- [Git Commit Guidelines](docs/git-commit-guidelines.md)
+- [File Naming Conventions](docs/file-naming-conventions.md)
+
+**@FutureDrew**: If you’re returning to this project after a break, please refer to these documents first. They provide quick guidance on things like commit message formats, file naming, and other working agreements.
+

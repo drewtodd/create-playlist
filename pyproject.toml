@@ -1,0 +1,16 @@
+[tool.black]
+line-length = 88
+skip-string-normalization = false
+
+[tool.ruff]
+line-length = 88
+extend-exclude = [".venv"]
+select = ["E", "F", "I"]  # E: pycodestyle, F: pyflakes, I: isort
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+[tool.ruff.lint]
+preview = true

@@ -2,27 +2,27 @@
 
 To maintain consistency and improve readability across the project, follow these file naming conventions for source code, configuration files, and documentation.
 
-## 🔤 General Rules
+## General Rules
 
 * Use **lowercase** letters for all file names.
 * Avoid spaces; use hyphens or underscores depending on context.
 * Be descriptive, but concise.
 * File names should reflect their contents or purpose.
 
-## 🐍 Python Files
+## Python Files
 
 * Use **snake\_case** for all Python module names:
 
-  * ✅ `create_playlist.py`
-  * ✅ `metadata_utils.py`
+  * `create_playlist.py`
+  * `metadata_utils.py`
 
-## 📝 Markdown / Documentation Files
+## Markdown / Documentation Files
 
 * Use **kebab-case** for documentation files:
 
-  * ✅ `git-commit-guidelines.md`
-  * ✅ `file-naming-conventions.md`
-  * ✅ `project-structure.md`
+  * `git-commit-guidelines.md`
+  * `file-naming-conventions.md`
+  * `project-structure.md`
 
 ### Why kebab-case?
 
@@ -30,7 +30,7 @@ To maintain consistency and improve readability across the project, follow these
 * Better for URLs and cross-platform tools
 * Consistent with conventions used in static site generators (e.g., Hugo, Jekyll)
 
-## 📁 Directory Names
+## Directory Names
 
 * Use **kebab-case** or **snake\_case** depending on the context:
 

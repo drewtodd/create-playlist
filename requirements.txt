@@ -1,5 +1,6 @@
 black==25.1.0
 click==8.1.8
+mutagen==1.47.0
 mypy_extensions==1.1.0
 packaging==25.0
 pathspec==0.12.1

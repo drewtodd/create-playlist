@@ -68,15 +68,42 @@ def extract_metadata(file_path: Path, verbose: bool = False) -> Dict[str, str] |
     except Exception as e:
         print(f"[WARN] Failed to read tags from {file_path.name}: {e}")
         return None
-                        
 
-def extract_all_metadata(file_paths: list[Path], verbose: bool = False) -> dict[Path, dict[str, str]]:
+
+def extract_all_metadata(
+    file_paths: list[Path], 
+    verbose: bool = False
+) -> dict[Path, dict[str, str]]:
     metadata_map = {}
     for file in file_paths:
         data = extract_metadata(file, verbose=verbose)
         if data is not None:
             metadata_map[file] = data
     return metadata_map
+
+
+def write_playlist(
+    file_paths: list[Path], 
+    output_path: Path, 
+    dry_run: bool = False, 
+    verbose: bool = False
+) -> None:
+    if dry_run:
+        if verbose:
+            print("[INFO] Dry run enabled. Skipping playlist write.")
+        return
+
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with output_path.open("w", encoding="utf-8", newline="\n") as f:
+            for path in file_paths:
+                f.write(str(path.resolve()) + "\n")
+
+        if verbose:
+            print(f"\n[INFO] Playlist written to: {output_path.resolve()}")
+
+    except Exception as e:
+        print(f"[ERROR] Failed to write playlist: {e}")
 
 
 def main():
@@ -99,6 +126,18 @@ def main():
         action="store_true",
         help="Print metadata for each matched file",
     )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="playlist.m3u",
+        help="Path and filename for output playlist (default: playlist.m3u)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        "-d",
+        action="store_true",
+        help="Simulate playlist creation without writing output",
+    )
     args = parser.parse_args()
 
     source_dir = Path(args.source).resolve()
@@ -114,6 +153,17 @@ def main():
         if args.verbose:
             for key, value in metadata.items():
                 print(f"  {key}: {value}")
+
+    # Example placeholder: all matched files (no filtering yet)
+    playlist_files = list(metadata_by_file.keys())
+
+    output_path = Path(args.output).resolve()
+    write_playlist(
+        playlist_files,
+        output_path=output_path,
+        dry_run=args.dry_run,
+        verbose=args.verbose
+    )
 
 
 if __name__ == "__main__":

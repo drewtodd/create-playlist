@@ -30,12 +30,10 @@ def find_audio_files(
     return matched_files
 
 
-def extract_metadata(file_path: Path, verbose: bool = False) -> Dict[str, str] | None:
+def extract_metadata(file_path: Path) -> Dict[str, str] | None:
     try:
         audio = MutagenFile(file_path)
         if audio is None or not audio.tags:
-            if verbose:
-                print(f"[INFO] No readable metadata in {file_path.name}")
             return None
 
         # Normalize tags to lowercase keys for consistent access
@@ -58,11 +56,6 @@ def extract_metadata(file_path: Path, verbose: bool = False) -> Dict[str, str] |
             "date": get(["date", "TDRC", "TYER", "©day"]),
         }
 
-        if verbose:
-            print(f"[INFO] Parsed: {file_path.name}")
-            for k, v in metadata.items():
-                print(f"  {k}: {v or '[empty]'}")
-
         return metadata
 
     except Exception as e:
@@ -70,28 +63,59 @@ def extract_metadata(file_path: Path, verbose: bool = False) -> Dict[str, str] |
         return None
 
 
-def extract_all_metadata(
-    file_paths: list[Path], 
-    verbose: bool = False
-) -> dict[Path, dict[str, str]]:
+def extract_all_metadata(file_paths: list[Path]) -> dict[Path, dict[str, str]]:
     metadata_map = {}
     for file in file_paths:
-        data = extract_metadata(file, verbose=verbose)
+        data = extract_metadata(file)
         if data is not None:
             metadata_map[file] = data
     return metadata_map
 
 
+def filter_by_genre(
+    metadata_map: dict[Path, dict[str, str]],
+    genre_filter: str,
+    partial: bool = False,
+    verbose: bool = False,
+) -> dict[Path, dict[str, str]]:
+    filtered = {}
+    genre_filter = genre_filter.lower().strip()
+
+    for path, tags in metadata_map.items():
+        genre = tags.get("genre", "").lower().strip()
+
+        if not genre:
+            if verbose:
+                print(f"[SKIP] {path.name} — genre tag missing or empty")
+            continue
+
+        match = genre_filter in genre if partial else genre == genre_filter
+
+        if match:
+            filtered[path] = tags
+            if verbose:
+                print(f"[MATCH] {path}")
+                for k, v in tags.items():
+                    print(f"  {k}: {v or '[empty]'}")
+        else:
+            if verbose:
+                print(
+                    f"[SKIP] {path.name} — genre '{genre}' did not match '{genre_filter}'"
+                )
+
+    return filtered
+
+
 def write_playlist(
-    file_paths: list[Path], 
-    output_path: Path, 
-    dry_run: bool = False, 
-    verbose: bool = False
+    file_paths: list[Path],
+    output_path: Path,
+    dry_run: bool = False,
+    verbose: bool = False,
 ) -> None:
     if dry_run:
-        if verbose:
-            print("[INFO] Dry run enabled. Skipping playlist write.")
-        return
+        # if verbose:
+        print("\n[INFO] Dry run enabled. Skipping playlist write.\n")
+        # return
 
     try:
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -99,11 +123,11 @@ def write_playlist(
             for path in file_paths:
                 f.write(str(path.resolve()) + "\n")
 
-        if verbose:
-            print(f"\n[INFO] Playlist written to: {output_path.resolve()}")
+        # if verbose:
+        print(f"\n[INFO] Playlist written to: {output_path.resolve()}\n")
 
     except Exception as e:
-        print(f"[ERROR] Failed to write playlist: {e}")
+        print(f"\n[ERROR] Failed to write playlist: {e}\n")
 
 
 def main():
@@ -138,6 +162,18 @@ def main():
         action="store_true",
         help="Simulate playlist creation without writing output",
     )
+    parser.add_argument(
+        "--genre",
+        type=str,
+        help="Filter by genre (case-insensitive)",
+    )
+
+    parser.add_argument(
+        "--partial-match",
+        "-p",
+        action="store_true",
+        help="Enable substring matching for text-based filters (e.g., genre, artist)",
+    )
     args = parser.parse_args()
 
     source_dir = Path(args.source).resolve()
@@ -146,23 +182,38 @@ def main():
         return
 
     files = find_audio_files(source_dir, recursive=args.recursive)
+    if args.verbose:
+        print(f"[INFO] Found {len(files)} audio file(s) to examine")
     metadata_by_file = extract_all_metadata(files)
 
-    for file, metadata in metadata_by_file.items():
-        print(f"\n{file}")
-        if args.verbose:
-            for key, value in metadata.items():
-                print(f"  {key}: {value}")
+    # Apply genre filter if specified
+    if args.genre:
+        metadata_by_file = filter_by_genre(
+            metadata_by_file,
+            genre_filter=args.genre,
+            partial=args.partial_match,
+            verbose=args.verbose,
+        )
+
+    # for file, metadata in metadata_by_file.items():
+    #     print(f"\n{file}")
+    #     if args.verbose:
+    #         for key, value in metadata.items():
+    #             print(f"  {key}: {value}")
 
     # Example placeholder: all matched files (no filtering yet)
     playlist_files = list(metadata_by_file.keys())
+    if args.verbose:
+        print(
+            f"[INFO] {len(playlist_files)} file(s) matched and will be added to the playlist"
+        )
 
     output_path = Path(args.output).resolve()
     write_playlist(
         playlist_files,
         output_path=output_path,
         dry_run=args.dry_run,
-        verbose=args.verbose
+        verbose=args.verbose,
     )
 
 

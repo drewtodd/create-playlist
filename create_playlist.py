@@ -83,36 +83,39 @@ def extract_all_metadata(file_paths: list[Path]) -> dict[Path, dict[str, str]]:
     return metadata_map
 
 
-def filter_by_genre(
+def filter_by_string_field(
     metadata_map: dict[Path, dict[str, str]],
-    genre_filter: str,
+    field_name: str,
+    filter_values: list[str],
     partial: bool = False,
     verbose: bool = False,
 ) -> dict[Path, dict[str, str]]:
     filtered = {}
-    genre_filter = genre_filter.lower().strip()
-
+    normalized_values = [v.lower().strip() for v in filter_values]
     for path, tags in metadata_map.items():
-        genre = tags.get("genre", "").lower().strip()
-
-        if not genre:
+        field_value = tags.get(field_name, "").lower().strip()
+        if not field_value:
             if verbose:
-                print(f"[SKIP] {path.name} — genre tag missing or empty")
+                print(f"[SKIP] {path.name} — {field_name} tag missing or empty")
             continue
-
-        match = genre_filter in genre if partial else genre == genre_filter
-
+        match = any(val in field_value if partial else val == field_value for val in normalized_values)
         if match:
             filtered[path] = tags
             if verbose:
-                print(f"[MATCH] {path}")
-                for k, v in tags.items():
-                    print(f"  {k}: {v or '[empty]'}")
+                print(f"[MATCH] {path} — {field_name}: {field_value}")
         else:
             if verbose:
-                print(f"[SKIP] {path.name} — genre '{genre}' did not match '{genre_filter}'")
-
+                print(f"[SKIP] {path.name} — {field_name} '{field_value}' did not match any of {normalized_values}")
     return filtered
+
+
+def filter_by_genre(
+    metadata_map: dict[Path, dict[str, str]],
+    genre_filter: list[str],
+    partial: bool = False,
+    verbose: bool = False,
+) -> dict[Path, dict[str, str]]:
+    return filter_by_string_field(metadata_map, "genre", genre_filter, partial, verbose)
 
 
 def filter_by_year(
@@ -197,11 +200,14 @@ def main():
     parser.add_argument("-v", "--verbose", action="store_true", help="Print metadata for each matched file")
     parser.add_argument("--output", type=str, default="playlist.m3u", help="Path and filename for output playlist")
     parser.add_argument("-d", "--dry-run", action="store_true", help="Simulate playlist creation without writing output")
-    parser.add_argument("--genre", type=str, help="Filter by genre (case-insensitive)")
+    parser.add_argument("--genre", nargs="+", help="Filter by one or more genres")
     parser.add_argument("-p", "--partial-match", action="store_true", help="Enable substring matching for text-based filters")
     parser.add_argument("-l", "--relative-paths", action="store_true", help="Write paths as relative to the output directory")
     parser.add_argument("--format", nargs="+", help="Audio file extensions to include (e.g., flac mp3). Defaults to common formats.")
     parser.add_argument("--year", type=str, help="Filter by year or year range (e.g., 1970 or 1970-1979)")
+    parser.add_argument("--artist", nargs="+", help="Filter by one or more artists")
+    parser.add_argument("--composer", nargs="+", help="Filter by one or more composers")
+    parser.add_argument("--albumartist", nargs="+", help="Filter by one or more album artists")
 
     args = parser.parse_args()
 
@@ -243,6 +249,13 @@ def main():
             end_year=year_end,
             verbose=args.verbose,
         )
+
+    if args.artist:
+        metadata_by_file = filter_by_string_field(metadata_by_file, "artist", args.artist, partial=args.partial_match, verbose=args.verbose)
+    if args.composer:
+        metadata_by_file = filter_by_string_field(metadata_by_file, "composer", args.composer, partial=args.partial_match, verbose=args.verbose)
+    if args.albumartist:
+        metadata_by_file = filter_by_string_field(metadata_by_file, "albumartist", args.albumartist, partial=args.partial_match, verbose=args.verbose)
 
     playlist_files = list(metadata_by_file.keys())
     if args.verbose:

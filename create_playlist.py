@@ -4,11 +4,20 @@ from typing import Dict
 
 from mutagen import File as MutagenFile
 
+# Default file formats to include if --format is not specified
+DEFAULT_FORMATS = {".mp3", ".m4a", ".wav", ".aiff", ".flac", ".ogg"}
+
+
+def normalize_extensions(exts: list[str] | None) -> set[str]:
+    if not exts:
+        return DEFAULT_FORMATS
+    return {e.lower() if e.startswith(".") else f".{e.lower()}" for e in exts}
+
 
 def find_audio_files(
     source_dir: Path,
     recursive: bool = False,
-    allowed_extensions: set[str] = {".flac"},
+    allowed_extensions: set[str] = DEFAULT_FORMATS,
 ) -> list[Path]:
     matched_files = []
     if recursive:
@@ -143,54 +152,15 @@ def write_playlist(
 
 def main():
     parser = argparse.ArgumentParser(description="Scan for audio files and metadata")
-    parser.add_argument(
-        "--source",
-        type=str,
-        default=".",
-        help="Source directory to scan",
-    )
-    parser.add_argument(
-        "--recursive",
-        "-r",
-        action="store_true",
-        help="Recurse into subdirectories",
-    )
-    parser.add_argument(
-        "--verbose",
-        "-v",
-        action="store_true",
-        help="Print metadata for each matched file",
-    )
-    parser.add_argument(
-        "--output",
-        type=str,
-        default="playlist.m3u",
-        help="Path and filename for output playlist (default: playlist.m3u)",
-    )
-    parser.add_argument(
-        "--dry-run",
-        "-d",
-        action="store_true",
-        help="Simulate playlist creation without writing output",
-    )
-    parser.add_argument(
-        "--genre",
-        type=str,
-        help="Filter by genre (case-insensitive)",
-    )
-    parser.add_argument(
-        "--partial-match",
-        "-p",
-        action="store_true",
-        help="Enable substring matching for text-based filters (e.g., genre, artist)",
-    )
-    parser.add_argument(
-        "--relative-paths",
-        "--local-paths",
-        "-l",
-        action="store_true",
-        help="Write paths as relative to the output directory (default: absolute)",
-    )
+    parser.add_argument("--source", type=str, default=".", help="Source directory to scan")
+    parser.add_argument("-r", "--recursive", action="store_true", help="Recurse into subdirectories")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Print metadata for each matched file")
+    parser.add_argument("--output", type=str, default="playlist.m3u", help="Path and filename for output playlist")
+    parser.add_argument("-d", "--dry-run", action="store_true", help="Simulate playlist creation without writing output")
+    parser.add_argument("--genre", type=str, help="Filter by genre (case-insensitive)")
+    parser.add_argument("-p", "--partial-match", action="store_true", help="Enable substring matching for text-based filters")
+    parser.add_argument("-l", "--relative-paths", action="store_true", help="Write paths as relative to the output directory")
+    parser.add_argument("--format", nargs="+", help="Audio file extensions to include (e.g., flac mp3). Defaults to common formats.")
 
     args = parser.parse_args()
 
@@ -200,14 +170,10 @@ def main():
         return
 
     output_path = Path(args.output).resolve()
+    base_path = output_path.parent if args.relative_paths and args.output != "playlist.m3u" else source_dir
+    allowed_exts = normalize_extensions(args.format)
 
-    # Determine base path for relative writing
-    if args.relative_paths:
-        base_path = output_path.parent if args.output != "playlist.m3u" else source_dir
-    else:
-        base_path = None
-
-    files = find_audio_files(source_dir, recursive=args.recursive)
+    files = find_audio_files(source_dir, recursive=args.recursive, allowed_extensions=allowed_exts)
     if args.verbose:
         print(f"[INFO] Found {len(files)} audio file(s) to examine")
     metadata_by_file = extract_all_metadata(files)

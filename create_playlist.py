@@ -150,6 +150,7 @@ def write_playlist(
     verbose: bool = False,
     relative_paths: bool = False,
     base_path: Path | None = None,
+    append: bool = False,
 ) -> None:
     if dry_run:
         print("\n[INFO] Dry run enabled. Skipping playlist write.\n")
@@ -157,14 +158,15 @@ def write_playlist(
 
     try:
         output_path.parent.mkdir(parents=True, exist_ok=True)
+        mode = "a" if append else "w"
 
         if verbose:
-            mode = "relative" if relative_paths else "absolute"
-            print(f"[INFO] Writing playlist with {mode} paths")
+            path_mode = "appending to" if append else "writing to"
+            print(f"[INFO] {path_mode} playlist with {'relative' if relative_paths else 'absolute'} paths")
             if relative_paths and base_path:
                 print(f"[INFO] Relative base: {base_path}")
 
-        with output_path.open("w", encoding="utf-8", newline="\n") as f:
+        with output_path.open(mode, encoding="utf-8", newline="\n") as f:
             for path in file_paths:
                 if relative_paths and base_path:
                     try:
@@ -208,6 +210,7 @@ def main():
     parser.add_argument("--artist", nargs="+", help="Filter by one or more artists")
     parser.add_argument("--composer", nargs="+", help="Filter by one or more composers")
     parser.add_argument("--albumartist", nargs="+", help="Filter by one or more album artists")
+    parser.add_argument("-a", "--append", action="store_true", help="Append to the playlist if it already exists")
 
     args = parser.parse_args()
 
@@ -217,7 +220,7 @@ def main():
         return
 
     output_path = Path(args.output).resolve()
-    base_path = output_path.parent if args.relative_paths and args.output != "playlist.m3u" else source_dir
+    base_path = output_path.parent if args.relative_paths else Path.cwd()
     allowed_exts = normalize_extensions(args.format)
 
     files = find_audio_files(source_dir, recursive=args.recursive, allowed_extensions=allowed_exts)
@@ -268,6 +271,7 @@ def main():
         verbose=args.verbose,
         relative_paths=args.relative_paths,
         base_path=base_path,
+        append=args.append,
     )
 
 

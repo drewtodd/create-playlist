@@ -36,7 +36,6 @@ def extract_metadata(file_path: Path) -> Dict[str, str] | None:
         if audio is None or not audio.tags:
             return None
 
-        # Normalize tags to lowercase keys for consistent access
         raw_tags = {k.lower(): v for k, v in audio.tags.items()}
 
         def get(tag_keys: list[str]) -> str:
@@ -99,9 +98,7 @@ def filter_by_genre(
                     print(f"  {k}: {v or '[empty]'}")
         else:
             if verbose:
-                print(
-                    f"[SKIP] {path.name} — genre '{genre}' did not match '{genre_filter}'"
-                )
+                print(f"[SKIP] {path.name} — genre '{genre}' did not match '{genre_filter}'")
 
     return filtered
 
@@ -111,19 +108,33 @@ def write_playlist(
     output_path: Path,
     dry_run: bool = False,
     verbose: bool = False,
+    relative_paths: bool = False,
+    base_path: Path | None = None,
 ) -> None:
     if dry_run:
-        # if verbose:
         print("\n[INFO] Dry run enabled. Skipping playlist write.\n")
-        # return
+        return
 
     try:
         output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if verbose:
+            mode = "relative" if relative_paths else "absolute"
+            print(f"[INFO] Writing playlist with {mode} paths")
+            if relative_paths and base_path:
+                print(f"[INFO] Relative base: {base_path}")
+
         with output_path.open("w", encoding="utf-8", newline="\n") as f:
             for path in file_paths:
-                f.write(str(path.resolve()) + "\n")
+                if relative_paths and base_path:
+                    try:
+                        line = str(path.relative_to(base_path))
+                    except ValueError:
+                        line = str(path.resolve())
+                else:
+                    line = str(path.resolve())
+                f.write(line + "\n")
 
-        # if verbose:
         print(f"\n[INFO] Playlist written to: {output_path.resolve()}\n")
 
     except Exception as e:
@@ -167,13 +178,20 @@ def main():
         type=str,
         help="Filter by genre (case-insensitive)",
     )
-
     parser.add_argument(
         "--partial-match",
         "-p",
         action="store_true",
         help="Enable substring matching for text-based filters (e.g., genre, artist)",
     )
+    parser.add_argument(
+        "--relative-paths",
+        "--local-paths",
+        "-l",
+        action="store_true",
+        help="Write paths as relative to the output directory (default: absolute)",
+    )
+
     args = parser.parse_args()
 
     source_dir = Path(args.source).resolve()
@@ -181,12 +199,19 @@ def main():
         print(f"Error: {source_dir} is not a valid directory")
         return
 
+    output_path = Path(args.output).resolve()
+
+    # Determine base path for relative writing
+    if args.relative_paths:
+        base_path = output_path.parent if args.output != "playlist.m3u" else source_dir
+    else:
+        base_path = None
+
     files = find_audio_files(source_dir, recursive=args.recursive)
     if args.verbose:
         print(f"[INFO] Found {len(files)} audio file(s) to examine")
     metadata_by_file = extract_all_metadata(files)
 
-    # Apply genre filter if specified
     if args.genre:
         metadata_by_file = filter_by_genre(
             metadata_by_file,
@@ -195,25 +220,17 @@ def main():
             verbose=args.verbose,
         )
 
-    # for file, metadata in metadata_by_file.items():
-    #     print(f"\n{file}")
-    #     if args.verbose:
-    #         for key, value in metadata.items():
-    #             print(f"  {key}: {value}")
-
-    # Example placeholder: all matched files (no filtering yet)
     playlist_files = list(metadata_by_file.keys())
     if args.verbose:
-        print(
-            f"[INFO] {len(playlist_files)} file(s) matched and will be added to the playlist"
-        )
+        print(f"[INFO] {len(playlist_files)} file(s) matched and will be added to the playlist")
 
-    output_path = Path(args.output).resolve()
     write_playlist(
         playlist_files,
         output_path=output_path,
         dry_run=args.dry_run,
         verbose=args.verbose,
+        relative_paths=args.relative_paths,
+        base_path=base_path,
     )
 
 

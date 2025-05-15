@@ -23,6 +23,7 @@ python create_playlist.py [options]
 | `--partial-match, -p`  | Enables partial substring matches for text filters                                     |
 | `--output`             | Name and path for the generated `.m3u` playlist file                                   |
 | `--relative-paths, -l` | Write file paths relative to the playlist's location (or current directory if omitted) |
+| `--base-dir`           | Override the root directory used for relative paths (requires `--relative-paths`)      |
 | `--append, -a`         | Append to the playlist if it already exists                                            |
 | `--verbose, -v`        | Print matched files and actions to console                                             |
 
@@ -34,6 +35,9 @@ python create_playlist.py [options]
 * Playlist is a plain text `.m3u` file with **absolute or relative paths**
 * By default, the playlist file is **overwritten** unless `--append` is specified
 * `--dry-run` prevents any file writing and prints planned actions only
+* `--base-dir` overrides the default base path when writing relative paths
+* If `--base-dir` is not provided, uses the parent of `--output` or the current working directory
+* `--base-dir` is ignored unless `--relative-paths` is set
 
 ## Example
 
@@ -47,6 +51,7 @@ python create_playlist.py \
   --recursive \
   --output blues_playlist.m3u \
   --relative-paths \
+  --base-dir ./Music \
   --append \
   --verbose
 ```

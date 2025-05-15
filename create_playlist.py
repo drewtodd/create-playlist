@@ -211,6 +211,7 @@ def main():
     parser.add_argument("--composer", nargs="+", help="Filter by one or more composers")
     parser.add_argument("--albumartist", nargs="+", help="Filter by one or more album artists")
     parser.add_argument("-a", "--append", action="store_true", help="Append to the playlist if it already exists")
+    parser.add_argument("--base-dir", type=str, help="Optional root directory to use for relative paths")
 
     args = parser.parse_args()
 
@@ -220,7 +221,17 @@ def main():
         return
 
     output_path = Path(args.output).resolve()
-    base_path = output_path.parent if args.relative_paths else Path.cwd()
+    if args.relative_paths:
+        if args.base_dir:
+            base_path = Path(args.base_dir).resolve()
+            if not base_path.is_dir():
+                print(f"[ERROR] base-dir '{base_path}' is not a valid directory")
+                sys.exit(1)
+        else:
+            base_path = output_path.parent
+    else:
+        base_path = Path.cwd()
+
     allowed_exts = normalize_extensions(args.format)
 
     files = find_audio_files(source_dir, recursive=args.recursive, allowed_extensions=allowed_exts)
